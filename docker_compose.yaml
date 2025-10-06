@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  publisher_db:
+    image: mysql:8.0
+    container_name: publisher_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: publisher
+    volumes:
+      - ./publisher_db/mysql_data:/var/lib/mysql
+      - ./publisher_db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3307:3306"
+
+  subscriber_db:
+    image: mysql:8.0
+    container_name: subscriber_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: subscriber
+    volumes:
+      - ./subscriber_db/mysql_data:/var/lib/mysql
+      - ./subscriber_db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3308:3306"
+
+  publisher:
+    build:
+      context: ./publisher
+      dockerfile: Dockerfile
+    container_name: publisher
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./publisher:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - publisher_db
+
+  subscriber:
+    build:
+      context: ./subscriber
+      dockerfile: Dockerfile
+    container_name: subscriber
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./subscriber:/app
+    ports:
+      - "8001:8001"
+    depends_on:
+      - subscriber_db
+
+  ui_publisher:
+    build:
+      context: ./ui-publisher
+      dockerfile: Dockerfile
+    container_name: ui_publisher
+    ports:
+      - "8080:80"
+    depends_on:
+      - publisher
+
+  ui_subscriber:
+    build:
+      context: ./ui-subscriber
+      dockerfile: Dockerfile
+    container_name: ui_subscriber
+    ports:
+      - "8081:80"
+    depends_on:
+      - subscriber
