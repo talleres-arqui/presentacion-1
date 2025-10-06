@@ -4,4 +4,15 @@
 *.pyd
 *.pyd 
 *.pdf
-/venv/
+*venv/
+publisher/venv/
+
+publisher_db/
+subscriber_db/
+*.sock
+*.pid
+*.cnf
+__pycache__/
+*.log
+*.sock
+*/mysql_data/
