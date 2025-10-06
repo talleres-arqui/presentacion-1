@@ -24,9 +24,13 @@
         ></textarea>
       </div>
 
-      <button type="submit">Publicar</button>
+      <button type="submit" :disabled="cargando">
+        {{ cargando ? "Publicando..." : "Publicar" }}
+      </button>
 
-      <p v-if="mensaje" class="mensaje">{{ mensaje }}</p>
+      <p v-if="mensaje" class="mensaje" :class="{ exito: exito, error: !exito }">
+        {{ mensaje }}
+      </p>
     </form>
   </div>
 </template>
@@ -40,25 +44,35 @@ export default {
     return {
       titulo: "",
       body: "",
-      mensaje: ""
+      mensaje: "",
+      cargando: false,
+      exito: false,
     };
   },
   methods: {
     async enviarNoticia() {
+      this.mensaje = "";
+      this.cargando = true;
+      this.exito = false;
+
       try {
+        console.log("🛰️ Enviando noticia al backend...");
         const response = await axios.post("http://127.0.0.1:8000/publication", {
           title: this.titulo,
           body: this.body,
         });
-        this.mensaje = "✅ Noticia publicada con éxito";
-        console.log(response.data);
 
-        // Limpia el formulario
+        console.log("✅ Respuesta del backend:", response.data);
+        this.mensaje = "✅ Noticia publicada con éxito";
+        this.exito = true;
         this.titulo = "";
         this.body = "";
       } catch (error) {
-        console.error("Error al publicar noticia:", error);
+        console.error("❌ Error al publicar noticia:", error);
         this.mensaje = "❌ Error al publicar la noticia";
+        this.exito = false;
+      } finally {
+        this.cargando = false;
       }
     },
   },
@@ -107,15 +121,29 @@ button {
   cursor: pointer;
   width: 100%;
   font-size: 16px;
+  transition: background-color 0.3s;
 }
 
 button:hover {
   background-color: #0056b3;
 }
 
+button:disabled {
+  background-color: #7da7e0;
+  cursor: not-allowed;
+}
+
 .mensaje {
   margin-top: 15px;
   text-align: center;
   font-weight: bold;
+}
+
+.mensaje.exito {
+  color: #28a745;
+}
+
+.mensaje.error {
+  color: #dc3545;
 }
 </style>
