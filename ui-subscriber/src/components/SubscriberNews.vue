@@ -26,12 +26,12 @@ export default {
       mensaje: "",
       cargando: true,
       exito: false,
-      eventSource: null, // 🔹 En lugar de ws
+      eventSource: null,
     };
   },
   mounted() {
     this.cargarPublicaciones();
-    this.conectarSSE(); // 🔹 Reemplaza al WebSocket
+    this.conectarSSE();
   },
   methods: {
     async cargarPublicaciones() {
@@ -40,7 +40,7 @@ export default {
         if (!response.ok) throw new Error("Error al obtener publicaciones");
 
         const data = await response.json();
-        this.publicaciones = data.reverse(); // más recientes primero
+        this.publicaciones = data.reverse();
         this.cargando = false;
         console.log("🧾 Publicaciones iniciales cargadas:", data);
       } catch (error) {
@@ -50,8 +50,6 @@ export default {
         this.cargando = false;
       }
     },
-
-    // 🔹 Nuevo método para escuchar eventos SSE
     conectarSSE() {
       const url = "http://127.0.0.1:8001/stream";
       console.log("📡 Conectando a SSE:", url);
@@ -66,7 +64,6 @@ export default {
 
       this.eventSource.onmessage = (event) => {
         console.log("📩 Nuevo mensaje recibido:", event.data);
-        // Puedes parsear si viene en JSON
         try {
           const data = JSON.parse(event.data);
           this.publicaciones.unshift(data);
@@ -95,54 +92,108 @@ export default {
 </script>
 
 <style scoped>
-.form-container {
-  max-width: 600px;
-  margin: 50px auto;
-  background-color: #f4f4f4;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+/* 🌙 Fondo general y centrado */
+body {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #e2e8f0;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
 }
 
+/* 📦 Contenedor principal */
+.form-container {
+  max-width: 700px;
+  margin: 50px auto;
+  background: #1e293b;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  color: #f8fafc;
+}
+
+/* 📰 Título */
 h1 {
   text-align: center;
-  color: #333;
+  color: #38bdf8;
+  font-size: 2rem;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
+/* 📋 Lista de noticias */
 .lista-noticias {
   list-style-type: none;
   padding: 0;
-  margin-top: 15px;
+  margin: 0;
 }
 
+/* 🗞️ Tarjeta de cada noticia */
 .noticia {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 10px;
-  transition: background-color 0.3s;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  transition: all 0.3s ease;
 }
 
 .noticia:hover {
-  background-color: #e9f0ff;
+  background-color: #e0f2fe;
+  transform: translateY(-3px);
 }
 
+/* 📄 Título de la noticia */
+.noticia h3 {
+  color: #0f172a;
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+/* 📖 Texto del cuerpo */
+.noticia p {
+  font-size: 0.95rem;
+  color: #1e293b;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* ℹ️ Mensajes */
 .mensaje {
   text-align: center;
-  margin-top: 15px;
+  margin-top: 20px;
   font-weight: bold;
+  font-size: 1rem;
+  border-radius: 10px;
+  padding: 10px;
 }
 
 .mensaje.exito {
-  color: #28a745;
+  color: #22c55e;
 }
 
 .mensaje.error {
-  color: #dc3545;
+  color: #ef4444;
 }
 
 .mensaje.info {
-  color: #007bff;
+  color: #38bdf8;
+}
+
+/* 📱 Responsive */
+@media (max-width: 768px) {
+  .form-container {
+    margin: 20px;
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .noticia p {
+    font-size: 0.9rem;
+  }
 }
 </style>
