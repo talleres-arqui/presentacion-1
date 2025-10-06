@@ -7,6 +7,8 @@ import paho.mqtt.client as mqtt
 from database import SessionLocal, engine, Base
 from models import PublicationDB, Publication
 
+import json
+
 # ---------------------------
 # 1. Inicializar Base de Datos
 # ---------------------------
@@ -67,16 +69,9 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     mensaje = msg.payload.decode()
     print(f"📡 Recibido en MQTT: {mensaje}")
-    try:
-        # Obtén el loop principal que ya está corriendo
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        # Si no hay loop, crea uno nuevo (caso raro en FastAPI)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    # Usamos el loop principal guardado
+    main_loop.call_soon_threadsafe(mqtt_queue.put_nowait, mensaje)
 
-    # Mete el mensaje en la cola de manera segura desde otro hilo
-    loop.call_soon_threadsafe(mqtt_queue.put_nowait, mensaje)
 
 
 mqtt_client = mqtt.Client()
@@ -89,17 +84,19 @@ mqtt_client.on_message = on_message
 async def mqtt_consumer():
     while True:
         mensaje = await mqtt_queue.get()
-        print(f"📩 Mensaje recibido: {mensaje}")
+        print(f"🔄 Procesando mensaje MQTT: {mensaje}")
 
-        # Guardar en DB
         db = SessionLocal()
         try:
-            pub = PublicationDB(title="MQTT Event", body=mensaje)
+            data = json.loads(mensaje)
+            publication = Publication(**data)   # CORRECCIÓN AQUÍ
+            pub = PublicationDB(title=publication.title, body=publication.body)
+            print(publication.body)
+            
             db.add(pub)
             db.commit()
             db.refresh(pub)
 
-            # Enviar a WebSockets
             await manager.broadcast(f"{pub.id}: {pub.title} - {pub.body}")
         finally:
             db.close()
@@ -109,6 +106,9 @@ async def mqtt_consumer():
 # ---------------------------
 @app.on_event("startup")
 async def startup_event():
+    global main_loop
+    main_loop = asyncio.get_running_loop()  # Guardamos el loop principal
+    print("🚀 Iniciando MQTT y consumidor")
     mqtt_client.connect(BROKER, PORT, 60)
     mqtt_client.loop_start()
     asyncio.create_task(mqtt_consumer())
@@ -132,6 +132,6 @@ async def websocket_endpoint(websocket: WebSocket):
 # ---------------------------
 # 8. Endpoint REST para ver publicaciones
 # ---------------------------
-@app.get("/publications", response_model=List[Publication])
+@app.get("/", response_model=List[Publication])
 def get_publications(db: Session = Depends(get_db)):
     return db.query(PublicationDB).all()

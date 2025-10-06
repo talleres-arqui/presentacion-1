@@ -7,6 +7,8 @@ from models import PublicationDB, Publication
 
 import paho.mqtt.client as mqtt
 
+import json
+
 # Configuración de la DB
 Base.metadata.create_all(bind=engine)
 
@@ -40,8 +42,9 @@ def create_publication(publication: Publication, db: Session = Depends(get_db)):
     db.refresh(db_publication)
 
     # Enviar por MQTT
-    mensaje = f"{db_publication.id}: {db_publication.title} - {db_publication.body}"
-    mqtt_client.publish(TOPIC, mensaje)
+    mensaje = publication.__dict__
+    mensaje['id'] = db_publication.id
+    mqtt_client.publish(TOPIC, json.dumps(mensaje))
 
     return {"message": "Publication created & sent via MQTT", "publication": db_publication}
 
