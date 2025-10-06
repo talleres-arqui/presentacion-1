@@ -1,0 +1,15 @@
+/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyd 
+*.pdf
+*venv/
+publisher_db/mysql_data/
+*.sock
+*.pid
+*.cnf
+/__pycache__/
+*.log
+*.sock
+*/mysql_data/
