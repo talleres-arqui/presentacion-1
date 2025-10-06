@@ -8,11 +8,21 @@ from models import PublicationDB, Publication
 import paho.mqtt.client as mqtt
 
 import json
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # Configuración de la DB
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+#CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configuración MQTT
 BROKER = "broker.hivemq.com"   # o test.mosquitto.org
