@@ -1,48 +1,52 @@
-from fastapi import FastAPI, HTTPException
-from typing import Dict
-from model import Item
+from typing import List
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from database import SessionLocal, engine, Base
+from models import PublicationDB, Publication
+
+import paho.mqtt.client as mqtt
+
+# Configuración de la DB
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Modelo de datos (validación automática con Pydantic)
+# Configuración MQTT
+BROKER = "broker.hivemq.com"   # o test.mosquitto.org
+PORT = 1883
+TOPIC = "mi/topico/de/prueba"
+
+mqtt_client = mqtt.Client()
+mqtt_client.connect(BROKER, PORT, 60)
+mqtt_client.loop_start()  # para que funcione en segundo plano
 
 
-# Base de datos simulada (diccionario)
-fake_db: Dict[int, Item] = {}
+# Dependencia de base de datos
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-# Rutas CRUD ------------------------------
 
-@app.get("/")
-def read_root():
-    return {"message": "¡Bienvenido a la API con FastAPI!"}
+@app.post("/publication")
+def create_publication(publication: Publication, db: Session = Depends(get_db)):
+    # Guardar en DB
+    db_publication = PublicationDB(title=publication.title, body=publication.body)
+    db.add(db_publication)
+    db.commit()
+    db.refresh(db_publication)
 
-@app.get("/items/")
-def get_items():
-    return fake_db
+    # Enviar por MQTT
+    mensaje = f"{db_publication.id}: {db_publication.title} - {db_publication.body}"
+    mqtt_client.publish(TOPIC, mensaje)
 
-@app.get("/items/{item_id}")
-def get_item(item_id: int):
-    if item_id not in fake_db:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
-    return fake_db[item_id]
+    return {"message": "Publication created & sent via MQTT", "publication": db_publication}
 
-@app.post("/items/{item_id}")
-def create_item(item_id: int, item: Item):
-    if item_id in fake_db:
-        raise HTTPException(status_code=400, detail="El item ya existe")
-    fake_db[item_id] = item
-    return {"message": "Item creado correctamente", "item": item}
 
-@app.put("/items/{item_id}")
-def update_item(item_id: int, item: Item):
-    if item_id not in fake_db:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
-    fake_db[item_id] = item
-    return {"message": "Item actualizado", "item": item}
-
-@app.delete("/items/{item_id}")
-def delete_item(item_id: int):
-    if item_id not in fake_db:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
-    del fake_db[item_id]
-    return {"message": "Item eliminado"}
+@app.get("/publications", response_model=List[Publication])
+def get_publications(db: Session = Depends(get_db)):
+    publications = db.query(PublicationDB).all()
+    return publications
