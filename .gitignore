@@ -3,7 +3,6 @@
 *.pyo
 *.pyd
 *.pyd 
-*.pdf
 *venv/
 publisher_db/mysql_data/
 *.sock
